@@ -1,46 +1,38 @@
 package controller
 
 import model.{SolarPanel, WindTurbine, HydroPower, EnergySource}
-
 import utils.CSVReader
 
 object PowerPlantController {
 
-  def monitor(source: EnergySource): String = {
-    val latest = source match {
-      case sp: SolarPanel => sp.getLatestData
-      case wt: WindTurbine => wt.getLatestData
-      case hp: HydroPower => hp.getLatestData
-      case _ => None
-    }
+  def monitor(source: EnergySource, year: Int, month: Int, day: Int, hour: Option[Int] = None): Unit = {
+    val dailyData = source.getDataByDate(year, month, day, hour)
 
-    latest match {
-      case Some((time, value)) =>
-        f"Current output is $value%.1f MW at $time"
-      case None =>
-        "No data available."
+    if (dailyData.isEmpty) {
+      println(s"No data available for $year-$month-$day${hour.map(h => s" $h:00").getOrElse("")}.")
+    } else {
+      dailyData.foreach { record =>
+        println(f"[Monitor] ${record.hourString} - Output: ${record.power}%.1f MW")
+        if (record.power < threshold(source)) {
+          println(f"[Control] ${record.hourString} - Low output detected! Adjusting settings...")
+        }
+      }
     }
   }
 
+
+  def threshold(source: EnergySource): Double = source match {
+    case _: SolarPanel => 50.0
+    case _: WindTurbine => 30.0
+    case _: HydroPower => 70.0
+    case _ => 9999.0
+  }
 
   def control(source: EnergySource): String = {
     source.adjustSettings()
   }
 
-  def displayDeviceStatus(source: EnergySource): Unit = {
-    val title = source match {
-      case _: SolarPanel => "Solar Panel"
-      case _: WindTurbine => "Wind Turbine"
-      case _: HydroPower => "Hydro Power"
-      case _ => "Energy Device"
-    }
-
-    println("=" * 15 + s" $title [${source.id}] " + "=" * 15)
-    println("Monitoring: " + monitor(source))
-    println("Control:    " + control(source))
-    println()
-  }
-
+  // ✨ displayDeviceStatus 可以删掉，不再需要！
 
   def main(args: Array[String]): Unit = {
     val solarData = CSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
@@ -51,9 +43,6 @@ object PowerPlantController {
     val windTurbine = WindTurbine("WT-001", windData)
     val hydroPlant = HydroPower("HP-001", hydroData)
 
-    displayDeviceStatus(solarPanel)
-    displayDeviceStatus(windTurbine)
-    displayDeviceStatus(hydroPlant)
+    println("Program ready. Please run MainApp.scala to interact with the system.")
   }
-
 }
