@@ -43,6 +43,7 @@ object MainApp {
               None
             }
 
+
             // 调用 monitor
             println("\nSolar Panel Monitoring:")
             PowerPlantController.monitor(solarPanel, year, month, day, hourOpt)
