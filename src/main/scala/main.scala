@@ -1,6 +1,7 @@
 import controller.PowerPlantController
 import model.{SolarPanel, WindTurbine, HydroPower}
-import utils.CSVReader
+import utils.{CSVReader, DataCollection}
+
 
 object MainApp {
   def main(args: Array[String]): Unit = {
@@ -55,7 +56,25 @@ object MainApp {
 
 
           case 2 =>
-            println("功能开发中 (Store data)")
+            print("Enter a year that need calculate:")
+            val year = scala.io.StdIn.readInt()
+
+            val solarData = CSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
+            val windData = CSVReader.readWindData("data/Cleaned_Wind_Data.csv")
+            val hydroData = CSVReader.readHydroData("data/Cleaned_Hydro_Data.csv")
+
+            val solarPanel = SolarPanel("SP-001", solarData)
+            val windTurbine = WindTurbine("WT-001", windData)
+            val hydroPlant = HydroPower("HP-001", hydroData)
+
+            val solarYearData = DataCollection.getYearData(solarPanel, year)
+            val windYearData = DataCollection.getYearData(windTurbine, year)
+            val hydroYearData = DataCollection.getYearData(hydroPlant, year)
+
+            DataCollection.collectDataForYear(year, solarYearData, windYearData, hydroYearData)
+
+            println(s"Data for the year $year has been collected and stored successfully.")
+
 
           case 3 =>
             println("功能开发中 (View stored file)")
