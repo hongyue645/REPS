@@ -31,5 +31,6 @@ object CSVReader {
     }.toList
     bufferedSource.close()
     data
+    
   }
 }

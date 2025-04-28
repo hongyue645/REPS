@@ -21,6 +21,7 @@ case class SolarPanel(id: String, forecastData: List[EnergyData]) extends Energy
     }
   }
 
+  
   override def date: String = forecastData.lastOption.map(_.dateString).getOrElse("N/A")
   override def powerOfDate: String = forecastData.lastOption.map(_.power.toString).getOrElse("N/A")
 }
