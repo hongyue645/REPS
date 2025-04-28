@@ -1,0 +1,71 @@
+package controller
+import scala.concurrent.duration._
+import utils.CSVReader
+import model.{SolarPanel, WindTurbine, HydroPower, EnergySource}
+import java.io.{BufferedWriter, FileWriter, PrintWriter}
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
+import scala.util.{Random, Try}
+
+object DataCollection {
+
+  implicit val ec: ExecutionContext = ExecutionContext.global
+
+  def collectAndStoreData(): Future[Unit] = Future {
+
+    val solarData = CSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
+    val windData = CSVReader.readWindData("data/Cleaned_Wind_Data.csv")
+    val hydroData = CSVReader.readHydroData("data/Cleaned_Hydro_Data.csv")
+
+    val solarPanel = SolarPanel("SP-001", solarData)
+    val windTurbine = WindTurbine("WT-001", windData)
+    val hydroPlant = HydroPower("HP-001", hydroData)
+
+    storeDataToFile(solarPanel, windTurbine, hydroPlant)
+  }
+
+  def storeDataToFile(solarPanel: SolarPanel, windTurbine: WindTurbine, hydroPlant: HydroPower): Unit = {
+    val filePath = "data/collected_energy_data.csv"
+
+    val writer = new PrintWriter(new BufferedWriter(new FileWriter(filePath, true)))
+
+    if (new java.io.File(filePath).length() == 0) {
+      writer.println("Device,Date,EnergyGenerated(MW)")
+    }
+
+
+    writeDeviceData(writer, solarPanel)
+    writeDeviceData(writer, windTurbine)
+    writeDeviceData(writer, hydroPlant)
+
+    writer.close()
+    println(s"Data has been saved to $filePath")
+  }
+
+  def writeDeviceData(writer: PrintWriter, source: EnergySource): Unit = {
+    val data = source.getLatestData match {
+      case Some((date, energy)) =>
+        s"${source.getClass.getSimpleName},$date,$energy"
+      case None => s"${source.getClass.getSimpleName},No data available"
+    }
+    writer.println(data)
+  }
+
+
+  def scheduleDataCollection(): Unit = {
+    val interval = 1.hour
+    val scheduler = new java.util.Timer()
+    scheduler.scheduleAtFixedRate(new java.util.TimerTask {
+      def run(): Unit = {
+        println("Collecting data...")
+        collectAndStoreData()
+      }
+    }, 0, interval.toMillis)
+  }
+
+  // 主方法
+  def main(args: Array[String]): Unit = {
+    println("Starting data collection...")
+    scheduleDataCollection() // 启动数据收集任务
+  }
+}
