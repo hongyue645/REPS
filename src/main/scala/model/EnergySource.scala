@@ -13,3 +13,5 @@ trait EnergySource {
   def getDataByDate(year: Int, month: Int, day: Int, hour: Option[Int] = None): List[EnergyData]
 }
 
+
+
