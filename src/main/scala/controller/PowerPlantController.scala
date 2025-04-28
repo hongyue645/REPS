@@ -15,11 +15,16 @@ object PowerPlantController {
         println(f"[Monitor] ${record.hourString} - Output: ${record.power}%.1f MW")
         if (record.power < threshold(source)) {
           println(f"[Control] ${record.hourString} - Low output detected! Adjusting settings...")
+          val controlResult = control(source)
+          println(s"[Control] Adjustment result: $controlResult")
         }
       }
     }
   }
 
+  def control(source: EnergySource): String = {
+    source.adjustSettings()
+  }
 
   def threshold(source: EnergySource): Double = source match {
     case _: SolarPanel => 50.0
@@ -27,12 +32,6 @@ object PowerPlantController {
     case _: HydroPower => 70.0
     case _ => 9999.0
   }
-
-  def control(source: EnergySource): String = {
-    source.adjustSettings()
-  }
-
-  // ✨ displayDeviceStatus 可以删掉，不再需要！
 
   def main(args: Array[String]): Unit = {
     val solarData = CSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
