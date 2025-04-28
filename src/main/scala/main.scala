@@ -1,58 +1,60 @@
 import java.io.{BufferedWriter, FileWriter, PrintWriter}
 import scala.util.{Try, Random}
 
-case class EnergyRecord(timestamp: String, source: String, value: Double)
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
-object DataCollection {
-  val dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+import controller.PowerPlantController
+import controller.DataCollection
 
-  def collectData(numRecords: Int): Seq[EnergyRecord] = {
-    val energySources = Seq("Solar", "Wind", "Hydro")
-    val now = java.time.LocalDateTime.now()
 
-    (0 until numRecords).map { i =>
-      val timestamp = now.minusMinutes(i.toLong).format(dateFormatter)
-      val source = energySources(Random.nextInt(energySources.length))
-      val value = BigDecimal(Random.nextDouble() * 1000).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble
-      EnergyRecord(timestamp, source, value)
-    }
-  }
-}
 
-object DataStorage {
-  def writeDataToCsv(records: Seq[EnergyRecord], filePath: String): Unit = {
-    val writer = new PrintWriter(new BufferedWriter(new FileWriter(filePath)))
-    try {
-      writer.println("timestamp,source,value")
-      records.foreach { record =>
-        writer.println(s"${record.timestamp},${record.source},${record.value}")
-      }
-      println(s"数据已保存到文件: $filePath")
-    } finally {
-      writer.close()
-    }
-  }
-}
 
 object MainApp {
   def main(args: Array[String]): Unit = {
+    val solarData = utils.CSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
+    val windData = utils.CSVReader.readWindData("data/Cleaned_Wind_Data.csv")
+    val hydroData = utils.CSVReader.readHydroData("data/Cleaned_Hydro_Data.csv")
 
-    println("开始收集数据...")
-    val data = DataCollection.collectData(100)
+    val solarPanel = model.SolarPanel("SP-001", solarData)
+    val windTurbine = model.WindTurbine("WT-001", windData)
+    val hydroPlant = model.HydroPower("HP-001", hydroData)
+    var running = true
+    while (running) {
+      println("1. Monitor the System")
+      println("2. Store the collected data in a file")
+      println("3. View the data stored in a file")
+      println("4. Analyse the data collected")
+      println("0. Exit")
+      print("Enter your choice:")
+      try {
+        val choice = scala.io.StdIn.readInt()
+        choice match {
+          case 1 =>
+            PowerPlantController.displayDeviceStatus(solarPanel)
+            PowerPlantController.displayDeviceStatus(windTurbine)
+            PowerPlantController.displayDeviceStatus(hydroPlant)
 
-    // 2. 保存数据到 CSV 文件
-    println("将数据保存到文件...")
-    DataStorage.writeDataToCsv(data, "energy_data.csv")
+          case 2 =>
 
-    println("模拟错误输入: 无效的日期格式")
-    val invalidDateInput = "2024-04-31" // 无效日期
+            print("Enter the date that needs check (yyyy-mm-dd)")
+            val date = scala.io.StdIn.readLine()
 
-    Try(java.time.LocalDate.parse(invalidDateInput, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))) match {
-      case scala.util.Success(_) => println("日期格式有效")
-      case scala.util.Failure(exception) => println(s"错误: 日期格式无效, 请输入正确的日期格式")
+            Await.result(DataCollection.collectAndStoreData(date), 10.seconds)
+          case 3 =>
+
+          case 4 =>
+
+          case 0 =>
+            println("Exiting program.")
+            running = false
+          case _ =>
+            println("Invalid choice, please try again.")
+        }
+      } catch {
+        case e: NumberFormatException =>
+          println("Invalid input. Please enter a valid number.")
+      }
     }
-
-    // 5. 提示用户
-    println("Exiting..")
   }
 }
