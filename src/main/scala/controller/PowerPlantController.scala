@@ -22,6 +22,8 @@ object PowerPlantController {
     }
   }
 
+
+
   def control(source: EnergySource): String = {
     source.adjustSettings()
   }
