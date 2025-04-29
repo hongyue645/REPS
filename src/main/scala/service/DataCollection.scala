@@ -58,14 +58,14 @@ object DataCollection {
 
   def formatRecord(record: model.EnergyData, source: String): List[String] = {
 
-    val formattedData = s"${record.year} ${record.month} ${record.day} ${record.hour},${record.power},$source"
+    val formattedData = s"${record.year},${record.month},${record.day},${record.hour},${record.power},$source"
     List(formattedData)
   }
 
   def main(args: Array[String]): Unit = {
-    val solarData = CSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
-    val windData = CSVReader.readWindData("data/Cleaned_Wind_Data.csv")
-    val hydroData = CSVReader.readHydroData("data/Cleaned_Hydro_Data.csv")
+    val solarData = MyCSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
+    val windData = MyCSVReader.readWindData("data/Cleaned_Wind_Data.csv")
+    val hydroData = MyCSVReader.readHydroData("data/Cleaned_Hydro_Data.csv")
 
     val solarPanel = SolarPanel("SP-001", solarData)
     val windTurbine = WindTurbine("WT-001", windData)

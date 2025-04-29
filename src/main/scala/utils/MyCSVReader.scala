@@ -3,7 +3,7 @@ package utils
 import model.EnergyData
 import scala.io.Source
 
-object CSVReader {
+object MyCSVReader {
 
   def readSolarData(path: String): List[EnergyData] = readCSV(path)
   def readWindData(path: String): List[EnergyData] = readCSV(path)
