@@ -44,7 +44,7 @@ object DataView {
     writer.write(htmlContent)
     writer.close()
 
-    println("HTML file generated successfully!")
+    println("HTML file is generated successfully!")
   }
   def main(arg: Array[String]):Unit={
     val data = ChartData.loadData("data/Combined_Power_Data_2022.csv")

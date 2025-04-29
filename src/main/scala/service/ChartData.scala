@@ -39,7 +39,11 @@ object ChartData {
 
   def generateGoogleChartData(aggregatedData: Map[LocalDate, Map[String, Double]]): String = {
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val dataRows = aggregatedData.map { case (date, powerMap) =>
+
+    // Sort the data by date before generating chart rows
+    val sortedData = aggregatedData.toSeq.sortBy(_._1) // Sort by date
+
+    val dataRows = sortedData.map { case (date, powerMap) =>
       val dateStr = date.format(dateFormatter)
       val solar = powerMap.getOrElse("Solar", 0.0)
       val wind = powerMap.getOrElse("Wind", 0.0)
@@ -59,4 +63,5 @@ object ChartData {
     ]);
     """
   }
+
 }
