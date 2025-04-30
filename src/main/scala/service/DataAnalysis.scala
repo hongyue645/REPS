@@ -48,13 +48,17 @@ object DataAnalysis {
       val average = values.sum / values.length
       val median = calculateMedian(values)
       val range = values.max - values.min
-      val percentile75 = calculatePercentile(values, 75)
+      val midrange = (values.max + values.min) / 2.0
+
+      // Calculate mode
+      val mode = calculateMode(values)
 
       Some(Map(
         "average" -> average,
         "median" -> median,
         "range" -> range,
-        "percentile75" -> percentile75
+        "midrange" -> midrange,
+        "mode" -> mode
       ))
     } catch {
       case e: Exception =>
@@ -89,5 +93,12 @@ object DataAnalysis {
     val sorted = values.sorted
     val index = (percentile * sorted.length) / 100
     sorted(index)
+  }
+
+  private def calculateMode(values: List[Double]): Double = {
+    // Count frequency of each value
+    val frequencyMap = values.groupBy(identity).mapValues(_.size)
+    // Find the value with maximum frequency
+    frequencyMap.maxBy(_._2)._1
   }
 }

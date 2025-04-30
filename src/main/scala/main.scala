@@ -195,7 +195,8 @@ object MainApp {
                   println(f"Average: ${stats("average")}%.2f MW")
                   println(f"Median: ${stats("median")}%.2f MW")
                   println(f"Range: ${stats("range")}%.2f MW")
-                  //println(f"75th Percentile: ${stats("percentile75")}%.2f MW")
+                  println(f"Midrange: ${stats("midrange")}%.2f MW")
+                  println(f"Mode: ${stats("mode")}%.2f MW")
                 case None =>
                   println("Could not perform analysis")
               }
