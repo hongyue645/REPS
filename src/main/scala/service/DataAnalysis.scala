@@ -5,13 +5,13 @@ import java.io.File
 import scala.collection.mutable.ListBuffer
 
 object DataAnalysis {
-  def analyzeEnergyData(year: Int, startDate: String, endDate: String, energyType: String): Option[Map[String, Double]] = {
+  def analyzeEnergyData(year: Int, startDate: String, endDate: String, energyType: String, filterType: String): (List[(String, Double)], Map[String, Double]) = {
     val filePath = s"data/Combined_Power_Data_$year.csv"
     val file = new File(filePath)
     
     if (!file.exists()) {
       println(s"No data exists for year $year")
-      return None
+      return (List(), Map())
     }
 
     try {
@@ -33,27 +33,40 @@ object DataAnalysis {
         source == energyType
       }
 
-      // Group by date and calculate daily totals
-      val dailyTotals = filteredData.groupBy(row => s"${row("Month")}-${row("Day")}")
-        .map { case (date, rows) =>
-          date -> rows.map(_("Power").toDouble).sum
-        }
+      // Group data based on filter type
+      val groupedData = filterType match {
+        case "hour" => 
+          filteredData.map { row =>
+            val dateTime = f"${row("Month").toInt}%02d-${row("Day").toInt}%02d ${row("Hour").toInt}:00"
+            dateTime -> row("Power").toDouble
+          }.toList.sortBy(_._1)
 
-      if (dailyTotals.isEmpty) {
-        println("No data found for the specified criteria")
-        return None
+        case "day" =>
+          filteredData.groupBy(row => f"${row("Month").toInt}%02d-${row("Day").toInt}%02d")
+            .map { case (date, rows) =>
+              date -> rows.map(_("Power").toDouble).sum
+            }.toList.sortBy(_._1)
+
+        case "month" =>
+          filteredData.groupBy(row => f"${row("Month").toInt}%02d")
+            .map { case (month, rows) =>
+              month -> rows.map(_("Power").toDouble).sum
+            }.toList.sortBy(_._1)
       }
 
-      val values = dailyTotals.values.toList
+      if (groupedData.isEmpty) {
+        println("No data found for the specified criteria")
+        return (List(), Map())
+      }
+
+      val values = groupedData.map(_._2)
       val average = values.sum / values.length
       val median = calculateMedian(values)
       val range = values.max - values.min
       val midrange = (values.max + values.min) / 2.0
-
-      // Calculate mode
       val mode = calculateMode(values)
 
-      Some(Map(
+      (groupedData, Map(
         "average" -> average,
         "median" -> median,
         "range" -> range,
@@ -63,7 +76,7 @@ object DataAnalysis {
     } catch {
       case e: Exception =>
         println(s"Error analyzing data: ${e.getMessage}")
-        None
+        (List(), Map())
     }
   }
 

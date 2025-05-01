@@ -189,16 +189,39 @@ object MainApp {
               print("Enter end date (mm-dd): ")
               val endDate = scala.io.StdIn.readLine()
 
-              service.DataAnalysis.analyzeEnergyData(year, startDate, endDate, energyType) match {
-                case Some(stats) =>
-                  println(s"\nAnalysis results for $energyType energy from $startDate to $endDate:")
-                  println(f"Average: ${stats("average")}%.2f MW")
-                  println(f"Median: ${stats("median")}%.2f MW")
-                  println(f"Range: ${stats("range")}%.2f MW")
-                  println(f"Midrange: ${stats("midrange")}%.2f MW")
-                  println(f"Mode: ${stats("mode")}%.2f MW")
-                case None =>
-                  println("Could not perform analysis")
+              println("\nSelect data filter type:")
+              println("1. By Hour")
+              println("2. By Day")
+              println("3. By Month")
+              print("Enter your choice (1-3): ")
+              val filterChoice = scala.io.StdIn.readInt()
+
+              val filterType = filterChoice match {
+                case 1 => "hour"
+                case 2 => "day"
+                case 3 => "month"
+                case _ => throw new IllegalArgumentException("Invalid filter type selection")
+              }
+
+              val (data, stats) = service.DataAnalysis.analyzeEnergyData(year, startDate, endDate, energyType, filterType)
+              
+              if (data.nonEmpty) {
+                println(s"\nPower Generation Data for $energyType energy from $startDate to $endDate:")
+                println("Time Period | Power (MW)")
+                println("-" * 30)
+                data.foreach { case (period, power) =>
+                  println(f"$period%10s | $power%9.2f")
+                }
+                println("-" * 30)
+                
+                println("\nStatistical Analysis:")
+                println(f"Average: ${stats("average")}%.2f MW")
+                println(f"Median: ${stats("median")}%.2f MW")
+                println(f"Range: ${stats("range")}%.2f MW")
+                println(f"Midrange: ${stats("midrange")}%.2f MW")
+                println(f"Mode: ${stats("mode")}%.2f MW")
+              } else {
+                println("Could not perform analysis")
               }
             } catch {
               case e: NumberFormatException =>
