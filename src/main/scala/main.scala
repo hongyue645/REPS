@@ -5,6 +5,7 @@ import utils.{MyCSVReader, DataCollection}
 import java.io.File
 import scala.io.StdIn
 import com.github.tototoshi.csv._
+import java.awt.Desktop
 
 object MainApp {
   def main(args: Array[String]): Unit = {
@@ -20,9 +21,9 @@ object MainApp {
     while (running) {
       println("\n=== Renewable Energy Plant System ===")
       println("1. Monitor the System")
-      println("2. Store the collected data in a file (TODO)")
-      println("3. View the data stored in a file (TODO)")
-      println("4. Analyse the data collected (TODO)")
+      println("2. Store the collected data in a file")
+      println("3. View the data stored in a file")
+      println("4. Analyse the data collected")
       println("0. Exit")
       print("Enter your choice: ")
       try {
@@ -81,7 +82,6 @@ object MainApp {
 
           case 3 =>
             try {
-              // Scan data directory for yearly data files
               val dataDir = new File("data")
               val yearPattern = "Combined_Power_Data_(\\d{4})\\.csv".r
               val availableYears = dataDir.listFiles
@@ -94,54 +94,32 @@ object MainApp {
                 println("No data files found for any year.")
               } else {
                 println("Available years:")
-                availableYears.foreach(year => println(s"$year"))
+                availableYears.foreach(year => println(s"- $year"))
 
-                print("Enter the year to view: ")
+                print("Enter the year to generate the view: ")
                 val selectedYear = scala.io.StdIn.readInt()
-                
-                if (availableYears.contains(selectedYear)) {
-                  // Read and display data for the selected year
-                  val filePath = s"data/Combined_Power_Data_$selectedYear.csv"
-                  val reader = CSVReader.open( new File( filePath ) )
-                  try {
-                    val data = reader.allWithHeaders()
-                    val total = data.map( _( "Power" ).toDouble ).sum
-                    println( "Total: " + total.toString )
-                  }
-                  finally
-                  {
-                    reader.close()
-                  }
-                  val source = scala.io.Source.fromFile(filePath)
-                  try {
-                    val lines = source.getLines().toList
-                    if (lines.nonEmpty) {
-                      // Skip header line and process data
-                      val data = lines.tail.map(_.split(","))
-                      
-                      // Calculate total power for each energy type
-                      val solarPower = data.filter(_(5) == "Solar").map(_(4).toDouble).sum
-                      val windPower = data.filter(_(5) == "Wind").map(_(4).toDouble).sum
-                      val hydroPower = data.filter(_(5) == "Hydro").map(_(4).toDouble).sum
 
-                      println(s"\nPower generation by source for year $selectedYear:")
-                      println(f"Solar: $solarPower%.2f MW")
-                      println(f"Wind: $windPower%.2f MW")
-                      println(f"Hydro: $hydroPower%.2f MW")
-                    }
-                  } finally {
-                    source.close()
+                if (availableYears.contains(selectedYear)) {
+                  val filePath = s"data/Combined_Power_Data_$selectedYear.csv"
+                  val chartData = service.ChartData.generateGoogleChartDataFromCSV(filePath)
+                  service.DataView.generateHTML(chartData, selectedYear)
+                  val file = new File(s"html/power_generation_curve_$selectedYear.html")
+                  if (Desktop.isDesktopSupported && Desktop.getDesktop.isSupported(Desktop.Action.BROWSE)) {
+                    Desktop.getDesktop.browse(file.toURI)
                   }
+                  println(s"View generated. Open html/power_generation_curve_$selectedYear.html to see the chart.")
                 } else {
-                  println(s"No data exists for year $selectedYear. Please try again.")
+                  println(s"No data file exists for year $selectedYear.")
                 }
               }
             } catch {
               case _: NumberFormatException =>
-                println("Please enter a valid year number.")
+                println("Please enter a valid year.")
               case e: Exception =>
-                println(s"An error occurred: ${e.getMessage}")
+                println(s"An unexpected error occurred: ${e.getMessage}")
             }
+
+
 
           case 4 =>
             try {

@@ -1,12 +1,13 @@
-package utils
+package service
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import scala.io.Source
 import scala.collection.mutable
+import com.github.tototoshi.csv._
 
 case class PowerData(year: Int, month: Int, day: Int, hour: Int, power: Double, energySource: String)
+
 object ChartData {
 
   def parseDate(year: Int, month: Int, day: Int): LocalDate = {
@@ -37,31 +38,45 @@ object ChartData {
     groupedData.mapValues(_.toMap).toMap
   }
 
-  def generateGoogleChartData(aggregatedData: Map[LocalDate, Map[String, Double]]): String = {
-    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  def generateGoogleChartDataFromCSV(filePath: String): String = {
+    val data = loadData(filePath)
+    val aggregatedData = aggregatePowerData(data)
+    val storageMap = estimateStorage(data)
 
-    // Sort the data by date before generating chart rows
-    val sortedData = aggregatedData.toSeq.sortBy(_._1) // Sort by date
+    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val sortedData = aggregatedData.toSeq.sortBy(_._1)
 
     val dataRows = sortedData.map { case (date, powerMap) =>
       val dateStr = date.format(dateFormatter)
       val solar = powerMap.getOrElse("Solar", 0.0)
       val wind = powerMap.getOrElse("Wind", 0.0)
       val hydro = powerMap.getOrElse("Hydro", 0.0)
-      s"['$dateStr', $solar, $wind, $hydro]"
+      val storage = storageMap.getOrElse(date, 0.0)
+      s"['$dateStr', $solar, $wind, $hydro, $storage]"
     }.mkString(",\n")
 
     s"""
-    var data = new google.visualization.DataTable();
-    data.addColumn('string', 'Date');
-    data.addColumn('number', 'Solar');
-    data.addColumn('number', 'Wind');
-    data.addColumn('number', 'Hydro');
-
-    data.addRows([
-      $dataRows
-    ]);
+      var data = google.visualization.arrayToDataTable([
+        ['Date', 'Solar', 'Wind', 'Hydro', 'StorageEstimate'],
+        $dataRows
+      ]);
     """
+  }
+
+  def estimateStorage(data: Seq[PowerData], dailyConsumption: Double = 10000.0, maxStorage: Double = 2000000): Map[LocalDate, Double] = {
+    var currentStorage = 0.0
+    val storageMap = mutable.LinkedHashMap[LocalDate, Double]()
+
+    val dailyGeneration = aggregatePowerData(data)
+
+    dailyGeneration.toSeq.sortBy(_._1).foreach { case (date, powerMap) =>
+      val dailyTotal = powerMap.values.sum
+      currentStorage += (dailyTotal - dailyConsumption)
+      currentStorage = math.max(0.0, math.min(currentStorage, maxStorage)) // 限制在0~max
+      storageMap(date) = currentStorage
+    }
+
+    storageMap.toMap
   }
 
 }
