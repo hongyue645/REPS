@@ -1,7 +1,9 @@
 import controller.PowerPlantController
 import model.{SolarPanel, WindTurbine, HydroPower}
+import service.DataAnalysis
 import utils.{MyCSVReader, DataCollection}
 import java.io.File
+import scala.io.StdIn
 import com.github.tototoshi.csv._
 
 object MainApp {
@@ -143,7 +145,6 @@ object MainApp {
 
           case 4 =>
             try {
-              // Get available years
               val dataDir = new File("data")
               val yearPattern = "Combined_Power_Data_(\\d{4})\\.csv".r
               val availableYears = dataDir.listFiles
@@ -156,73 +157,51 @@ object MainApp {
                 println("No data files found for any year.")
                 return
               }
-
               println("Available years:")
               availableYears.foreach(println)
-
-              // Get user input
               print("Enter the year to analyze: ")
               val year = scala.io.StdIn.readInt()
 
-              if (!availableYears.contains(year)) {
-                println(s"No data exists for year $year")
-                return
+              val filePath = s"data/Combined_Power_Data_$year.csv"
+              val records = DataAnalysis.loadData(filePath)
+              println("Choose the way you want to filter(hour/day/week/month):")
+              val periodType = StdIn.readLine().trim.toLowerCase
+              periodType match {
+                case "hour" =>
+                  print("Enter hour (0-23): ")
+                  val h = StdIn.readInt()
+                  val filtered = DataAnalysis.filterByHour(records, h)
+                  val agg = DataAnalysis.aggregate(filtered, "hour")
+                  DataAnalysis.printAggregates(agg)
+
+                case "day" =>
+                  print("Enter month (1-12): ")
+                  val m = StdIn.readInt()
+                  print("Enter day (1-31): ")
+                  val d = StdIn.readInt()
+                  val filtered = DataAnalysis.filterByDay(records, year, m, d)
+                  val agg = DataAnalysis.aggregate(filtered, "day")
+                  DataAnalysis.printAggregates(agg)
+
+                case "week" =>
+                  print("Enter the week number of the year (1-53): ")
+                  val w = StdIn.readInt()
+                  val filtered = DataAnalysis.filterByWeek(records, year, w)
+                  val agg = DataAnalysis.aggregate(filtered, "week")
+                  DataAnalysis.printAggregates(agg)
+
+                case "month" =>
+                  print("Enter month (1-12): ")
+                  val mo = StdIn.readInt()
+                  val filtered = DataAnalysis.filterByMonth(records, mo)
+                  val agg = DataAnalysis.aggregate(filtered, "month")
+                  DataAnalysis.printAggregates(agg)
+
+                case other =>
+                  println(s"Unknown period '$other'. Please choose hour, day, week, or month.")
+
               }
 
-              println("Select energy type to analyze:")
-              println("1. Solar")
-              println("2. Wind")
-              println("3. Hydro")
-              print("Enter your choice (1-3): ")
-              val energyChoice = scala.io.StdIn.readInt()
-
-              val energyType = energyChoice match {
-                case 1 => "Solar"
-                case 2 => "Wind"
-                case 3 => "Hydro"
-                case _ => throw new IllegalArgumentException("Invalid energy type selection")
-              }
-
-              print("Enter start date (mm-dd): ")
-              val startDate = scala.io.StdIn.readLine()
-
-              print("Enter end date (mm-dd): ")
-              val endDate = scala.io.StdIn.readLine()
-
-              println("\nSelect data filter type:")
-              println("1. By Hour")
-              println("2. By Day")
-              println("3. By Month")
-              print("Enter your choice (1-3): ")
-              val filterChoice = scala.io.StdIn.readInt()
-
-              val filterType = filterChoice match {
-                case 1 => "hour"
-                case 2 => "day"
-                case 3 => "month"
-                case _ => throw new IllegalArgumentException("Invalid filter type selection")
-              }
-
-              val (data, stats) = service.DataAnalysis.analyzeEnergyData(year, startDate, endDate, energyType, filterType)
-              
-              if (data.nonEmpty) {
-                println(s"\nPower Generation Data for $energyType energy from $startDate to $endDate:")
-                println("Time Period | Power (MW)")
-                println("-" * 30)
-                data.foreach { case (period, power) =>
-                  println(f"$period%10s | $power%9.2f")
-                }
-                println("-" * 30)
-                
-                println("\nStatistical Analysis:")
-                println(f"Average: ${stats("average")}%.2f MW")
-                println(f"Median: ${stats("median")}%.2f MW")
-                println(f"Range: ${stats("range")}%.2f MW")
-                println(f"Midrange: ${stats("midrange")}%.2f MW")
-                println(f"Mode: ${stats("mode")}%.2f MW")
-              } else {
-                println("Could not perform analysis")
-              }
             } catch {
               case e: NumberFormatException =>
                 println("Please enter valid numbers")

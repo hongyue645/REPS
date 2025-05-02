@@ -1,117 +1,127 @@
 package service
 
-import com.github.tototoshi.csv._
-import java.io.File
-import scala.collection.mutable.ListBuffer
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.IsoFields
+import scala.util.{Using, Try}
 
 object DataAnalysis {
-  def analyzeEnergyData(year: Int, startDate: String, endDate: String, energyType: String, filterType: String): (List[(String, Double)], Map[String, Double]) = {
-    val filePath = s"data/Combined_Power_Data_$year.csv"
-    val file = new File(filePath)
-    
-    if (!file.exists()) {
-      println(s"No data exists for year $year")
-      return (List(), Map())
-    }
 
-    try {
-      val reader = CSVReader.open(file)
-      val data = reader.allWithHeaders()
-      reader.close()
+  /**
+   * Represents a power generation record with timestamp components.
+   */
+  case class Record(
+                     timestamp: LocalDateTime,
+                     year:      Int,
+                     month:     Int,
+                     day:       Int,
+                     hour:      Int,
+                     solar:     Double,
+                     wind:      Double,
+                     hydro:     Double
+                   )
 
-      // Parse start and end dates
-      val (startMonth, startDay) = parseDate(startDate)
-      val (endMonth, endDay) = parseDate(endDate)
+  private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-      // Filter data by date range and energy type
-      val filteredData = data.filter { row =>
-        val month = row("Month").toInt
-        val day = row("Day").toInt
-        val source = row("EnergySource")
+  /**
+   * Loads CSV data and parses into a list of Record instances.
+   * Skips header and logs any malformed lines.
+   */
+  def loadData(csvPath: String): List[Record] = {
+    Using(scala.io.Source.fromFile(csvPath)) { source =>
+      source.getLines().drop(1).flatMap { line =>
+        val cols = line.split(",").map(_.trim)
+        val optRecord =
+          if (cols.length >= 6 && cols(0).forall(_.isDigit)) {
+            // combined format: year,month,day,hour,power,source
+            Try {
+              val y     = cols(0).toInt
+              val m     = cols(1).toInt
+              val d     = cols(2).toInt
+              val h     = cols(3).toInt
+              val p     = cols(4).toDouble
+              val src   = cols(5).toLowerCase
+              val ts    = LocalDateTime.of(y, m, d, h, 0)
+              Record(ts, y, m, d, h,
+                if (src=="solar") p else 0.0,
+                if (src=="wind")  p else 0.0,
+                if (src=="hydro") p else 0.0)
+            }.toOption
+          } else {
+            // timestamp format: yyyy-MM-dd HH:mm:ss,solar,wind,hydro
+            Try {
+              val ts    = LocalDateTime.parse(cols(0), formatter)
+              val sol   = cols.lift(1).flatMap(s => Try(s.toDouble).toOption).getOrElse(0.0)
+              val wind  = cols.lift(2).flatMap(s => Try(s.toDouble).toOption).getOrElse(0.0)
+              val hydro = cols.lift(3).flatMap(s => Try(s.toDouble).toOption).getOrElse(0.0)
+              Record(ts, ts.getYear, ts.getMonthValue, ts.getDayOfMonth, ts.getHour, sol, wind, hydro)
+            }.toOption
+          }
 
-        isDateInRange(month, day, startMonth, startDay, endMonth, endDay) && 
-        source == energyType
-      }
-
-      // Group data based on filter type
-      val groupedData = filterType match {
-        case "hour" => 
-          filteredData.map { row =>
-            val dateTime = f"${row("Month").toInt}%02d-${row("Day").toInt}%02d ${row("Hour").toInt}:00"
-            dateTime -> row("Power").toDouble
-          }.toList.sortBy(_._1)
-
-        case "day" =>
-          filteredData.groupBy(row => f"${row("Month").toInt}%02d-${row("Day").toInt}%02d")
-            .map { case (date, rows) =>
-              date -> rows.map(_("Power").toDouble).sum
-            }.toList.sortBy(_._1)
-
-        case "month" =>
-          filteredData.groupBy(row => f"${row("Month").toInt}%02d")
-            .map { case (month, rows) =>
-              month -> rows.map(_("Power").toDouble).sum
-            }.toList.sortBy(_._1)
-      }
-
-      if (groupedData.isEmpty) {
-        println("No data found for the specified criteria")
-        return (List(), Map())
-      }
-
-      val values = groupedData.map(_._2)
-      val average = values.sum / values.length
-      val median = calculateMedian(values)
-      val range = values.max - values.min
-      val midrange = (values.max + values.min) / 2.0
-      val mode = calculateMode(values)
-
-      (groupedData, Map(
-        "average" -> average,
-        "median" -> median,
-        "range" -> range,
-        "midrange" -> midrange,
-        "mode" -> mode
-      ))
-    } catch {
-      case e: Exception =>
-        println(s"Error analyzing data: ${e.getMessage}")
-        (List(), Map())
+        if (optRecord.isEmpty) println(s"Warning: skipped malformed line: $line")
+        optRecord
+      }.toList
+    }.getOrElse {
+      println(s"Error: failed to load data from $csvPath")
+      Nil
     }
   }
 
-  private def parseDate(date: String): (Int, Int) = {
-    val parts = date.split("-")
-    (parts(0).toInt, parts(1).toInt)
-  }
+  /** Returns the ISO week‐number for a LocalDateTime. */
+  def getWeekOfYear(ts: LocalDateTime): Int =
+    ts.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
 
-  private def isDateInRange(month: Int, day: Int, startMonth: Int, startDay: Int, endMonth: Int, endDay: Int): Boolean = {
-    val date = month * 100 + day
-    val start = startMonth * 100 + startDay
-    val end = endMonth * 100 + endDay
-    date >= start && date <= end
-  }
+  /** Filter functions **/
+  def filterByHour(data: List[Record], hour: Int): List[Record] =
+    data.filter(_.hour == hour)
 
-  private def calculateMedian(values: List[Double]): Double = {
-    val sorted = values.sorted
-    if (sorted.length % 2 == 0) {
-      val mid = sorted.length / 2
-      (sorted(mid - 1) + sorted(mid)) / 2.0
-    } else {
-      sorted(sorted.length / 2)
+  def filterByDay(data: List[Record], year: Int, month: Int, day: Int): List[Record] =
+    data.filter(r => r.year == year && r.month == month && r.day == day)
+
+  def filterByWeek(data: List[Record], year: Int, week: Int): List[Record] =
+    data.filter(r => r.year == year && getWeekOfYear(r.timestamp) == week)
+
+  def filterByMonth(data: List[Record], month: Int): List[Record] =
+    data.filter(_.month == month)
+
+  /**
+   * Aggregates records by the given period (hour, day, week, month).
+   */
+  def aggregate(records: List[Record], period: String): Map[String, (Double, Double, Double)] =
+    records
+      .groupBy { r =>
+        period.toLowerCase match {
+          case "hour"  => f"${r.year}-${r.month}%02d-${r.day}%02d ${r.hour}%02d:00"
+          case "day"   => f"${r.year}-${r.month}%02d-${r.day}%02d"
+          case "week"  => f"${r.year}-W${getWeekOfYear(r.timestamp)}%02d"
+          case "month" => f"${r.year}-${r.month}%02d"
+          case other   =>
+            println(s"Unknown period '$other', defaulting to day")
+            f"${r.year}-${r.month}%02d-${r.day}%02d"
+        }
+      }
+      .view
+      .mapValues { recs =>
+        (recs.map(_.solar).sum, recs.map(_.wind).sum, recs.map(_.hydro).sum)
+      }
+      .toMap
+
+  /**
+   * Prints the aggregated results in a table.
+   */
+  def printAggregates(agg: Map[String, (Double, Double, Double)]): Unit = {
+    println(f"${"Period"}%-20s | ${"Solar"}%10s | ${"Wind"}%10s | ${"Hydro"}%10s")
+    println("=" * 60)
+    agg.toSeq.sortBy(_._1).foreach { case (period, (s, w, h)) =>
+      println(f"$period%-20s | $s%10.2f | $w%10.2f | $h%10.2f")
     }
   }
 
-  private def calculatePercentile(values: List[Double], percentile: Int): Double = {
-    val sorted = values.sorted
-    val index = (percentile * sorted.length) / 100
-    sorted(index)
+  // (Optional) a main method to demo usage:
+  def main(args: Array[String]): Unit = {
+    val data = loadData("data/power.csv")
+    val daily = aggregate(filterByDay(data, 2025, 5, 1), "day")
+    printAggregates(daily)
   }
 
-  private def calculateMode(values: List[Double]): Double = {
-    // Count frequency of each value
-    val frequencyMap = values.groupBy(identity).mapValues(_.size)
-    // Find the value with maximum frequency
-    frequencyMap.maxBy(_._2)._1
-  }
 }
