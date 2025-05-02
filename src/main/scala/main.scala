@@ -166,41 +166,36 @@ object MainApp {
               val records = DataAnalysis.loadData(filePath)
               println("Choose the way you want to filter(hour/day/week/month):")
               val periodType = StdIn.readLine().trim.toLowerCase
-              periodType match {
-                case "hour" =>
+              val filtered = periodType match {
+                case "hour"  =>
                   print("Enter hour (0-23): ")
                   val h = StdIn.readInt()
-                  val filtered = DataAnalysis.filterByHour(records, h)
-                  val agg = DataAnalysis.aggregate(filtered, "hour")
-                  DataAnalysis.printAggregates(agg)
-
-                case "day" =>
+                  DataAnalysis.filterByHour(records, h)
+                case "day"   =>
                   print("Enter month (1-12): ")
                   val m = StdIn.readInt()
                   print("Enter day (1-31): ")
                   val d = StdIn.readInt()
-                  val filtered = DataAnalysis.filterByDay(records, year, m, d)
-                  val agg = DataAnalysis.aggregate(filtered, "day")
-                  DataAnalysis.printAggregates(agg)
-
-                case "week" =>
-                  print("Enter the week number of the year (1-53): ")
+                  DataAnalysis.filterByDay(records, year, m, d)
+                case "week"  =>
+                  print("Enter week number (1-53): ")
                   val w = StdIn.readInt()
-                  val filtered = DataAnalysis.filterByWeek(records, year, w)
-                  val agg = DataAnalysis.aggregate(filtered, "week")
-                  DataAnalysis.printAggregates(agg)
-
+                  DataAnalysis.filterByWeek(records, year, w)
                 case "month" =>
                   print("Enter month (1-12): ")
                   val mo = StdIn.readInt()
-                  val filtered = DataAnalysis.filterByMonth(records, mo)
-                  val agg = DataAnalysis.aggregate(filtered, "month")
-                  DataAnalysis.printAggregates(agg)
-
-                case other =>
-                  println(s"Unknown period '$other'. Please choose hour, day, week, or month.")
-
+                  DataAnalysis.filterByMonth(records, mo)
+                case other    =>
+                  println(s"Unknown period '$other'. Defaulting to full-year data.")
+                  records
               }
+              println("\n--- Aggregated Sums ---")
+              val sums = DataAnalysis.aggregate(filtered, periodType)
+              DataAnalysis.printAggregates(sums)
+
+              println("\n--- Data Analysis ---")
+              DataAnalysis.printDescriptiveStats(filtered, periodType)
+
 
             } catch {
               case e: NumberFormatException =>
