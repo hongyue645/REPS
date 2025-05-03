@@ -1,11 +1,12 @@
 import controller.PowerPlantController
 import model.{SolarPanel, WindTurbine, HydroPower}
-import service.DataAnalysis
+import service.{DataAnalysis, AlertService}
 import utils.{MyCSVReader, DataCollection}
 import java.io.File
 import scala.io.StdIn
 import com.github.tototoshi.csv._
 import java.awt.Desktop
+
 
 object MainApp {
   def main(args: Array[String]): Unit = {
@@ -24,6 +25,7 @@ object MainApp {
       println("2. Store the collected data in a file")
       println("3. View the data stored in a file")
       println("4. Analyse the data collected")
+      println("5. Detect anomalies and alert")
       println("0. Exit")
       print("Enter your choice: ")
       try {
@@ -183,6 +185,12 @@ object MainApp {
               case e: Exception =>
                 println(s"An error occurred: ${e.getMessage}")
             }
+
+          case 5 =>
+            println("Enter date (format: yyyy-mm-dd): ")
+            val input = scala.io.StdIn.readLine()
+            val alerts = AlertService.checkEnergyStatus(input)
+            alerts.foreach(println)
 
           case 0 =>
             println("Exiting program.")

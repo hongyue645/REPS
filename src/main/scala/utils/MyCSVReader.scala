@@ -13,8 +13,8 @@ object MyCSVReader {
     val bufferedSource = Source.fromFile(filePath)
     val data = bufferedSource.getLines().drop(1).map { line =>
       val cols = line.split(",").map(_.trim)
-      val startTime = cols(0) // 取startTime这一列
-      val power = cols(2).toDouble // hydroGeneration这一列
+      val startTime = cols(0)
+      val power = cols(2).toDouble
 
       val dateAndTime = startTime.split(" ")
       val datePart = dateAndTime(0) // "2016-04-22"
@@ -25,7 +25,7 @@ object MyCSVReader {
       val month = dateFields(1).toInt
       val day = dateFields(2).toInt
 
-      val hour = timePart.split(":")(0).toInt // 取"21"小时部分
+      val hour = timePart.split(":")(0).toInt
 
       EnergyData(year, month, day, hour, power)
     }.toList
