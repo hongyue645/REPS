@@ -17,8 +17,8 @@ object MyCSVReader {
       val power = cols(2).toDouble
 
       val dateAndTime = startTime.split(" ")
-      val datePart = dateAndTime(0) // "2016-04-22"
-      val timePart = dateAndTime(1) // "21:00:00+00:00"
+      val datePart = dateAndTime(0) 
+      val timePart = dateAndTime(1) 
 
       val dateFields = datePart.split("-")
       val year = dateFields(0).toInt

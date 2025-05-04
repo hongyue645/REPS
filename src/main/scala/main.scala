@@ -7,7 +7,7 @@ import scala.io.StdIn
 import com.github.tototoshi.csv._
 import java.awt.Desktop
 
-
+//Group1 member: Hongyue Zhang, Jialu Ma, Yanli Zhang
 object MainApp {
   def main(args: Array[String]): Unit = {
     val solarData = MyCSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
