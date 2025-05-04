@@ -62,8 +62,27 @@ object MainApp {
 
 
           case 2 =>
-            print("Enter a year that need calculate:")
-            val year = scala.io.StdIn.readInt()
+            val validYears = 2017 to 2025
+            var year = 0
+            var valid = false
+
+            while (!valid) {
+              print("Enter the year to collect data (2017–2025): ")
+              val input = scala.io.StdIn.readLine()
+              try {
+                val parsed = input.toInt
+                if (validYears.contains(parsed)) {
+                  year = parsed
+                  valid = true
+                } else {
+                  println("Invalid year! Please enter a year between 2017 and 2025.")
+                }
+              } catch {
+                case _: NumberFormatException =>
+                  println("Please enter a valid number.")
+              }
+            }
+
 
             val solarData = MyCSVReader.readSolarData("data/Cleaned_Solar_Data.csv")
             val windData = MyCSVReader.readWindData("data/Cleaned_Wind_Data.csv")
