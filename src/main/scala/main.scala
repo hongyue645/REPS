@@ -62,12 +62,12 @@ object MainApp {
 
 
           case 2 =>
-            val validYears = 2017 to 2025
+            val validYears = 2016 to 2025
             var year = 0
             var valid = false
 
             while (!valid) {
-              print("Enter the year to collect data (2017–2025): ")
+              print("Enter the year to collect data (2016–2025): ")
               val input = scala.io.StdIn.readLine()
               try {
                 val parsed = input.toInt
@@ -75,7 +75,7 @@ object MainApp {
                   year = parsed
                   valid = true
                 } else {
-                  println("Invalid year! Please enter a year between 2017 and 2025.")
+                  println("No data for this year! Please enter a year between 2016 and 2025.")
                 }
               } catch {
                 case _: NumberFormatException =>
@@ -96,6 +96,9 @@ object MainApp {
             val windYearData = DataCollection.getYearData(windTurbine, year)
             val hydroYearData = DataCollection.getYearData(hydroPlant, year)
 
+            if (solarYearData.isEmpty && year == 2016) {
+              println("Notice: Solar data is not available for year 2016. Only Wind and Hydro will be included.")
+            }
             DataCollection.collectDataForYear(year, solarYearData, windYearData, hydroYearData)
 
             println(s"Data for the year $year has been collected and stored successfully.")
