@@ -135,46 +135,47 @@ object MainApp {
 
               if (availableYears.isEmpty) {
                 println("No data files found for any year.")
-                return
-              }
-              println("Available years:")
-              availableYears.foreach(println)
-              print("Enter the year to analyze: ")
-              val year = scala.io.StdIn.readInt()
+              } else{
+                println("Available years:")
+                availableYears.foreach(println)
+                print("Enter the year to analyze: ")
+                val year = scala.io.StdIn.readInt()
 
-              val filePath = s"data/Combined_Power_Data_$year.csv"
-              val records = DataAnalysis.loadData(filePath)
-              println("Choose the way you want to filter(hour/day/week/month):")
-              val periodType = StdIn.readLine().trim.toLowerCase
-              val filtered = periodType match {
-                case "hour"  =>
-                  print("Enter hour (0-23): ")
-                  val h = StdIn.readInt()
-                  DataAnalysis.filterByHour(records, h)
-                case "day"   =>
-                  print("Enter month (1-12): ")
-                  val m = StdIn.readInt()
-                  print("Enter day (1-31): ")
-                  val d = StdIn.readInt()
-                  DataAnalysis.filterByDay(records, year, m, d)
-                case "week"  =>
-                  print("Enter week number (1-53): ")
-                  val w = StdIn.readInt()
-                  DataAnalysis.filterByWeek(records, year, w)
-                case "month" =>
-                  print("Enter month (1-12): ")
-                  val mo = StdIn.readInt()
-                  DataAnalysis.filterByMonth(records, mo)
-                case other    =>
-                  println(s"Unknown period '$other'. Defaulting to full-year data.")
-                  records
-              }
-              println("\n--- Aggregated Sums ---")
-              val sums = DataAnalysis.aggregate(filtered, periodType)
-              DataAnalysis.printAggregates(sums)
+                val filePath = s"data/Combined_Power_Data_$year.csv"
+                val records = DataAnalysis.loadData(filePath)
+                println("Choose the way you want to filter(hour/day/week/month):")
+                val periodType = StdIn.readLine().trim.toLowerCase
+                val filtered = periodType match {
+                  case "hour" =>
+                    print("Enter hour (0-23): ")
+                    val h = StdIn.readInt()
+                    DataAnalysis.filterByHour(records, h)
+                  case "day" =>
+                    print("Enter month (1-12): ")
+                    val m = StdIn.readInt()
+                    print("Enter day (1-31): ")
+                    val d = StdIn.readInt()
+                    DataAnalysis.filterByDay(records, year, m, d)
+                  case "week" =>
+                    print("Enter week number (1-53): ")
+                    val w = StdIn.readInt()
+                    DataAnalysis.filterByWeek(records, year, w)
+                  case "month" =>
+                    print("Enter month (1-12): ")
+                    val mo = StdIn.readInt()
+                    DataAnalysis.filterByMonth(records, mo)
+                  case other =>
+                    println(s"Unknown period '$other'. Defaulting to full-year data.")
+                    records
+                }
+                println("\n--- Aggregated Sums ---")
+                val sums = DataAnalysis.aggregate(filtered, periodType)
+                DataAnalysis.printAggregates(sums)
 
-              println("\n--- Data Analysis ---")
-              DataAnalysis.printDescriptiveStats(filtered, periodType)
+                println("\n--- Data Analysis ---")
+                DataAnalysis.printDescriptiveStats(filtered, periodType)
+              }
+
 
 
             } catch {
